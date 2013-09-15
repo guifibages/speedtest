@@ -20,6 +20,7 @@ type OoklaClient struct {
 	XMLName xml.Name          `xml:"settings"`
 	Client  OoklaClientConfig `xml:"client"`
 	Server  string
+	Timeout int
 }
 
 type OoklaClientConfig struct {
@@ -82,7 +83,7 @@ func (c *OoklaClient) Download() []DownloadResult {
 			speed := size * 8 / lapse
 			result[i] = DownloadResult{Speed: speed, Seconds: lapse, Size: size, File: url, Latency: latency}
 			//fmt.Printf("\tURL:%s (%s) %dbytes in %fseconds (%fbps)\n", url, res.Status, size, lapse, speed)
-		case <-time.After(20 * time.Second):
+		case <-time.After(time.Duration(c.Timeout) * time.Second):
 			fmt.Printf("Timed out on %.2fMB file\n", size/1024/1024)
 			return result // Timed out
 		}
@@ -91,8 +92,7 @@ func (c *OoklaClient) Download() []DownloadResult {
 	return result
 }
 
-func (c *OoklaClient) TestServer(server string) {
-	c.Server = server
+func (c *OoklaClient) TestServer() {
 	res := c.Download()
 	var j int
 	var totaltime, totalbytes, maxspeed, minspeed, maxlat, minlat, totallat float64

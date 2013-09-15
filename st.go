@@ -22,18 +22,23 @@ import (
  */
 
 func main() {
-	var server_address string
-	usage := "server to test"
-	flag.StringVar(&server_address, "server", "speedtest.guifibages.net", usage)
-	flag.StringVar(&server_address, "s", "speedtest.guifibages.net", usage+" (shorthand)")
-	flag.Parse()
+
+	//var listen bool
+	//flag.BoolVar(&listen, "listen", true, "act as a server")
+	//flag.BoolVar(&listen, "l", true, "act as a server (shorthand)")
 
 	c := new(speedtest.OoklaClient)
+	flag.StringVar(&c.Server, "server", "speedtest.guifibages.net", "server to test against")
+	flag.StringVar(&c.Server, "s", "speedtest.guifibages.net", "server to test against (shorthand)")
+	flag.IntVar(&c.Timeout, "timeout", 30, "timeout in seconds")
+	flag.IntVar(&c.Timeout, "t", 30, "timeout in seconds (shorthand)")
+	flag.Parse()
+
 	err := c.GetConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Speedtest against", server_address)
-	fmt.Printf("IP: %s\nLon:%s\nLat:%s\n", c.Client.IP, c.Client.Lon, c.Client.Lat)
-	c.TestServer(server_address)
+	fmt.Printf("Speedtest against %s with a %d seconds timeout\n", c.Server, c.Timeout)
+	//fmt.Printf("IP: %s\nLon:%s\nLat:%s\n", c.Client.IP, c.Client.Lon, c.Client.Lat)
+	c.TestServer()
 }
