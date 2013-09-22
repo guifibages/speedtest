@@ -1,0 +1,105 @@
+<html>
+<head>
+	<title>Websocket test</title>
+	<style type="text/css">
+	textarea {
+		font-family: monospace;
+	}
+	</style>
+	<script type="text/javascript">
+function logstatus(msg) {
+	if (typeof(msg) == "undefined") {
+		msg="Partial: "
+	}
+	var lapse = ((new Date() - start) /1000)
+	if (lapse - lastlap < 2 && msg=="Partial: ") {
+		return
+	}
+	lastlap = lapse
+	var speed = ((amount*8)/1000000)/lapse
+	log(""+ lapse.toFixed() + " " + msg + " Transferred " + (amount/1024/1024).toFixed(3) + "MB Speed: " + speed.toFixed(3) +"mbps")
+
+}
+var lastlap
+var start
+var amount=0
+function testUpload() {
+	start = new Date()
+	var oReq = new XMLHttpRequest();
+	chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    data = new Array(10000).join(chars)
+    postdata = 'content1=' + data
+	oReq.open("POST", "/speedtest/upload.php", true);
+	log("Testing upload")
+	amount=postdata.length
+
+	oReq.onreadystatechange = function() {//Call a function when the state changes.
+		if(oReq.readyState == 4 && oReq.status == 200) {
+			log(oReq.responseText);
+			log("Upload finished")
+			logstatus("Upload speed: ")
+			log("")
+			testDownload()
+		}
+	}
+
+	oReq.onprogress = function (oEvent) {
+		log("Onprogress")
+		amount = oEvent.loaded
+		logstatus()
+		console.log(oEvent)
+	}
+	oReq.send(postdata)
+
+}
+
+function speedtest() {
+	document.getElementsByTagName('textarea')[0].value=""
+	log("Starting speedtest on " + window.location.host)
+	testUpload()
+}
+
+function testDownload() {
+	log("Testing download")
+	start = new Date()
+	var oReq = new XMLHttpRequest();
+	oReq.open("GET", "/speedtest/random1000x1000.jpg", true);
+	//oReq.responseType = "arrayBuffer";
+
+	oReq.onload = function (oEvent) {
+		var arrayBuffer = oReq.response; // Note: not oReq.responseText
+		console.log("Finishing load ")
+	};
+	oReq.onloadend = function (oEvent) {
+		logstatus("Download speed: ")
+		log("Speedtest finished")
+	}
+	oReq.onprogress = function (oEvent) {
+		amount = oEvent.loaded
+		var lapse = ((new Date() - start) /1000)
+		if (lapse > 10) {
+			oReq.abort()
+		}
+		logstatus()
+		console.log(oEvent)
+	}
+	oReq.onerror = function (oEvent) {
+		console.log("Error loading ")
+		console.log(oEvent)
+		console.log(oReq)
+	};
+	oReq.send();
+}
+
+function log(msg) {
+	var area = document.getElementsByTagName('textarea')[0]
+	area.value = area.value + msg + "\n"
+}
+
+
+	</script>
+</head>
+<body onload="speedtest()">
+<textarea rows="24" cols="80"></textarea>
+</body>
+</html>

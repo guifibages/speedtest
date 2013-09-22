@@ -1,0 +1,79 @@
+<html>
+<head>
+	<title>Websocket test</title>
+	<style type="text/css">
+	textarea {
+		font-family: monospace;
+	}
+	</style>
+	<script type="text/javascript">
+function logstatus(msg) {
+	if (typeof(msg) == "undefined") {
+		msg="Partial: "
+	}
+	var lapse = ((new Date() - start) /1000)
+	var speed = ((amount*1024*8)/1000000)/lapse
+	log(""+msg + lapse + " Transferred " + amount + "KB Speed: " + speed.toFixed(3) +"mbps")
+
+}
+function init() {
+	wsUri = "ws://" + window.location.host + "/send"
+	start = new Date()
+	ws = new WebSocket(wsUri);
+
+	ws.onmessage = function(msg) {
+		amount++
+	/*    lapse = (new Date() - start) /1000
+	    var arrayBuffer = msg.data;
+	    var speed = (msg.data.size * 8/lapse)/1000000
+	    // var bytes = new Uint8Array(arrayBuffer);
+	//    console.log("received " + (msg.data.size/1024) + "KB in " + lapse + "ms at " + speed + "mbps")
+	    // ws.send(JSON.stringify({"size": bytes.length}))
+	    */
+	    if (amount == total) {
+		   clearInterval(timer)
+	    	logstatus("Final: ")
+	    	ws.send(JSON.stringify({"Size": total, "Time": ((new Date() - start) /1000), "Latency": latency}))
+	    	ws.close()
+	    }
+	};
+	ws.onopen = function (event) {
+		log(window.location.host)
+		latency = new Date() - start
+	    console.log("onopen: service=");
+		ws.send(JSON.stringify({"Size": total, "Direction": "send"}))
+		console.log("sent")
+		timer = setInterval(logstatus, 1000)
+	}
+	ws.onerror = function (event) {
+	           console.log("onerror");
+	           status = "DISCONNECTED";
+	           ws.close();
+	           ws = null;
+	}
+	ws.onclose = function (event) {
+	   console.log("onclose");
+	   console.log("Time: " + ((new Date() - start) /1000))
+	   status = "DISCONNECTED";
+	   ws.close();
+	   ws = null;
+	}
+}
+var ws
+var start
+var total=200*1024
+var amount=0
+var timer
+var latency
+function log(msg) {
+	var area = document.getElementsByTagName('textarea')[0]
+	area.value = area.value + msg + "\n"
+}
+
+
+	</script>
+</head>
+<body onload="init()">
+<textarea rows="24" cols="80"></textarea>
+</body>
+</html>

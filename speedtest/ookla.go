@@ -3,15 +3,18 @@ package speedtest
 import (
 	"encoding/xml"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
 
 const (
-	ClientConfigURL = "http://www.speedtest.net/speedtest-config.php"
+	OoklaClientConfigURL = "http://www.speedtest.net/speedtest-config.php"
 )
 
 //	PrefServer      = "http://speedtest.bcn.adamo.es/speedtest"
@@ -30,7 +33,7 @@ type OoklaClientConfig struct {
 }
 
 func (c *OoklaClient) GetConfig() error {
-	res, err := http.Get(ClientConfigURL)
+	res, err := http.Get(OoklaClientConfigURL)
 	if err != nil {
 		return err
 	}
@@ -48,19 +51,12 @@ func (c *OoklaClient) GetConfig() error {
 	return nil
 }
 
-type DownloadResult struct {
-	Speed   float64
-	Seconds float64
-	Size    float64
-	File    string
-	Latency float64
-}
-
-func (c *OoklaClient) Download() []DownloadResult {
+func (c *OoklaClient) Download() []*Result {
 	sizes := [10]int{350, 500, 750, 1000, 1500, 2000, 2500, 3000, 3500, 4000}
-	result := make([]DownloadResult, 10)
+	result := make([]*Result, 10)
 	for i, v := range sizes {
-		url := fmt.Sprintf("http://%s/speedtest/random%dx%d.jpg", c.Server, v, v)
+		file := fmt.Sprintf("random%dx%d.jpg", v, v)
+		url := fmt.Sprintf("http://%s/speedtest/%s", c.Server, file)
 		start := time.Now()
 		res, err := http.Get(url)
 		if err != nil {
@@ -71,7 +67,7 @@ func (c *OoklaClient) Download() []DownloadResult {
 			log.Fatal(err)
 		}
 		latency := time.Since(start).Seconds() * 1000
-		fmt.Printf("Downloading %.2fMB file (Latency: %.2fms) from %s\n", size/1024/1024, latency, c.Server)
+		fmt.Printf("Downloading %.2fB file (%s) (Latency: %.2fms) from %s\n", size, file, latency, c.Server)
 		downTimer := make(chan int)
 		go func(res *http.Response) {
 			res.Write(ioutil.Discard)
@@ -80,8 +76,9 @@ func (c *OoklaClient) Download() []DownloadResult {
 		select {
 		case _ = <-downTimer:
 			lapse := time.Since(start).Seconds()
-			speed := size * 8 / lapse
-			result[i] = DownloadResult{Speed: speed, Seconds: lapse, Size: size, File: url, Latency: latency}
+			result[i] = NewResult(size, lapse)
+			result[i].Latency = latency
+			result[i].File = url
 			//fmt.Printf("\tURL:%s (%s) %dbytes in %fseconds (%fbps)\n", url, res.Status, size, lapse, speed)
 		case <-time.After(time.Duration(c.Timeout) * time.Second):
 			fmt.Printf("Timed out on %.2fMB file\n", size/1024/1024)
@@ -92,7 +89,32 @@ func (c *OoklaClient) Download() []DownloadResult {
 	return result
 }
 
+func (c *OoklaClient) Upload() {
+
+	buf := make([]byte, (1024))
+	randomSrc := randomDataMaker{rand.NewSource(1028890720402726901)}
+	io.ReadFull(&randomSrc, buf)
+	data := string(buf)
+	extension := "php"
+	uploadurl := fmt.Sprintf("http://%s/speedtest/upload.%s", c.Server, extension)
+	fmt.Println("Uploading to", uploadurl, "data", len(data))
+	v := url.Values{}
+	v.Add("content1", data)
+	resp, err := http.PostForm(uploadurl,
+		v)
+	if err != nil {
+		fmt.Println("Error posting", err)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading body", err)
+	}
+	fmt.Println("Response:", string(body))
+}
+
 func (c *OoklaClient) TestServer() {
+	c.Upload()
 	res := c.Download()
 	var j int
 	var totaltime, totalbytes, maxspeed, minspeed, maxlat, minlat, totallat float64

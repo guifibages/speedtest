@@ -17,3 +17,8 @@ func BenchmarkRandomDataMaker(b *testing.B) {
 		}
 	}
 }
+
+func TestServer(t *testing.T) {
+	go ExampleHandler()
+	ClientTest()
+}
