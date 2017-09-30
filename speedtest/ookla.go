@@ -67,7 +67,7 @@ func (c *OoklaClient) Download() []*Result {
 			log.Fatal(err)
 		}
 		latency := time.Since(start).Seconds() * 1000
-		fmt.Printf("Downloading %.2fB file (%s) (Latency: %.2fms) from %s\n", size, file, latency, c.Server)
+		fmt.Printf("Downloading %.2f B file (%s) (Latency: %.2f ms) from %s\n", size, file, latency, c.Server)
 		downTimer := make(chan int)
 		go func(res *http.Response) {
 			res.Write(ioutil.Discard)
@@ -79,9 +79,9 @@ func (c *OoklaClient) Download() []*Result {
 			result[i] = NewResult(size, lapse)
 			result[i].Latency = latency
 			result[i].File = url
-			//fmt.Printf("\tURL:%s (%s) %dbytes in %fseconds (%fbps)\n", url, res.Status, size, lapse, speed)
+			//fmt.Printf("\tURL:%s (%s) %d bytes in %f seconds (%f bps)\n", url, res.Status, size, lapse, speed)
 		case <-time.After(time.Duration(c.Timeout) * time.Second):
-			fmt.Printf("Timed out on %.2fMB file\n", size/1024/1024)
+			fmt.Printf("Timed out on %.2f MiB file\n", size/1024/1024)
 			return result // Timed out
 		}
 		//			fmt.Printf("\tURL:%s (%s) %s\n\t%v\n", url, res.Status, size, res.Header)
@@ -144,7 +144,7 @@ func (c *OoklaClient) TestServer() {
 	medlat := totallat / float64(j)
 	medspeed := (totalbytes * 8) / totaltime
 
-	fmt.Printf("Summary: %.2fMB transferred in %.2f seconds from %s\n", totalbytes/1024/1024, totaltime, c.Server)
-	fmt.Printf("  Latency: min: %.2fms med: %.2fms max: %.2fms\n", minlat, medlat, maxlat)
-	fmt.Printf("  Speed: min: %.2fmbps med: %.2fmbps max: %.2fmbps\n", minspeed/1000000, medspeed/1000000, maxspeed/1000000)
+	fmt.Printf("Summary: %.2f MiB transferred in %.2f seconds from %s\n", totalbytes/1024/1024, totaltime, c.Server)
+	fmt.Printf("  Latency: min: %.2f ms med: %.2f ms max: %.2f ms\n", minlat, medlat, maxlat)
+	fmt.Printf("  Speed: min: %.2f Mbps med: %.2f Mbps max: %.2f Mbps\n", minspeed/1000000, medspeed/1000000, maxspeed/1000000)
 }
